@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+.venv/
+
+# 実行時生成物(検証落ちレポート・ベンチ出力)
+reports/
+results/
+bench/out/
+
+# ベンチの計測対象(手元のリポジトリを指す。雛形は targets.example.json)
+bench/targets.json
+
+# 秘密情報
+key.txt
+*.key
+.env
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# 一時ファイル
+*.log
+*.tmp
+*.bak
+
+# CodeGraph(ローカル索引)
+.codegraph/

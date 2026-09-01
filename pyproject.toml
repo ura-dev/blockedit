@@ -1,0 +1,8 @@
+[project]
+name = "blockedit"
+version = "0.1.0"
+description = "ブロック単位の機械編集ランナー。対象の抽出・変換・機械検証・適用をランナーが持ち、変更範囲外はバイト同一を構造的に保証する"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []

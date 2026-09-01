@@ -1,0 +1,27 @@
+{
+  "_comment": "bench/targets.json にコピーして、手元のリポジトリに合わせて書き換える。targets.json は git 管理外。",
+
+  "root": "../your-repo",
+  "task": "example_heading_labels.py",
+
+  "doc": "docs/guide/getting_started.md",
+
+  "targets": [
+    "docs/guide/getting_started.md",
+    "docs/guide/configuration.md",
+    "docs/reference/cli.md"
+  ],
+
+  "injections": [
+    ["インストール手順", "[インストール手順](../guide/install.md)"],
+    ["設定ファイル", "[設定ファイル](../reference/config.md)"],
+    ["「既定値」", "「[既定値](../reference/defaults.md)」"]
+  ],
+
+  "fake_paths": [
+    "../guide/install.md",
+    "../reference/config.md",
+    "./notes.md",
+    "../README.md"
+  ]
+}
