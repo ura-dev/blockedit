@@ -29,14 +29,43 @@ Gemma4 26B を載せたもの。**LLMの生出力もランナーを出ない。*
 3. **所有する** — ランナーが周りを持つ
 4. **棄却する** — 機械検証に落ちたら適用しない
 
+## はじめて動かす
+
+**依存パッケージは無い**(標準ライブラリだけ、Python 3.11以上)。方式1のタスクなら
+LLMサーバも要らないので、取得してそのまま最後まで通せる。
+
+```
+git clone https://github.com/ura-dev/blockedit && cd blockedit
+uv sync                                   # 依存ゼロなので `python blockedit.py` でも動く
+```
+
+編集したいリポジトリを1つ決めて、`--root` で渡す。**省略すると起動を拒否される** —
+カレントのgitルート、つまりランナー自身が対象になってしまうため。
+
+```
+# 1. 何が当たるかだけ見る。ファイルは1バイトも変えない
+uv run python blockedit.py tasks/example_link_flatten.py --root ../your-repo --select-only
+
+# 2. 変換結果を見る。既定がdry-runなので、まだ書き込まない
+uv run python blockedit.py tasks/example_link_flatten.py --root ../your-repo
+
+# 3. レポートを開く。落ちたブロックと、受理したブロックの前後が入っている
+cat reports/example_link_flatten_*.txt
+
+# 4. 納得したら、作業ブランチの上で書き込む
+uv run python blockedit.py tasks/example_link_flatten.py --root ../your-repo --apply
+```
+
+`example_link_flatten.py` は `[表示](パス)` を `表示` に畳む正規表現タスク(方式1)。
+当たらなければ `--files 'docs/**/*.md'` で対象を広げるか、タスクの `PATTERN` を
+自分のリポジトリに合わせて書き換える。1〜2で0件なら、まだ何も起きていない。
+
+LLMを呼ぶ方式2に進むのは、[タスクファイルの書き方](#タスクファイルの書き方)を読んで
+自分のタスクを1本書いてから。OpenAI互換のサーバを別途起動する。
+
 ## 実行
 
 **このランナーは編集対象のリポジトリの外に置く。**対象は起動時に渡す。
-
-```
-uv run python blockedit.py tasks/foo.py --root ../your-repo
-```
-
 `--root` を省いた場合は環境変数 `BLOCKEDIT_ROOT`、それも無ければ**カレント
 ディレクトリ**のgitルートを対象にする(ランナーの置き場所ではない)。推測の結果が
 ランナー自身のリポジトリになったときは、黙って自分を編集せずに起動を拒否する。
@@ -51,7 +80,7 @@ uv run python blockedit_selftest.py                   # ゲートと分割の回
 
 標準出力は1〜2行に固定される(`files= hit= applied= rejected=` と `git diff --stat`)。
 **dry-runの中身はレポートファイルに出る** — 落ちたブロックと、受理したブロックの前後の
-両方。初回はまず `--select-only` を見て、次にdry-runのレポートを読む。
+両方。
 
 CLIの上書きは**狭める方向にだけ**用意してある(`--files` / `--limit` / `--select-only`)。
 `UNIT` と `SCOPE` は安全境界なので実行時オプションにしない。振って測るのは `bench/` の
