@@ -187,14 +187,44 @@ def unfence(raw, frag):
     return strip_fence(raw)
 
 
-def clean(raw, frag):
-    """モデル出力の飾りを剥がす。コードフェンスと、全体を囲む引用符。
+_OUTER_WS = re.compile(r"\A(\s*).*?(\s*)\Z", re.S)
 
-    引用符を剥がすのは、行スコープの分類でラベルが `"OTHER"` の形で返るため。
-    ただし断片自身が引用符で始まる/終わるときは触らない — フェンスと同じで、
-    本物を飾りと間違えて消さないための門。
+
+def outer_ws(text):
+    """断片の先頭・末尾の空白。行の字下げと、行末の空白がここに入る。"""
+    m = _OUTER_WS.match(text)
+    return m.group(1), m.group(2)
+
+
+def reown_ws(text, frag):
+    """外枠の空白を原文どおりに戻す。**モデルの領分ではない。**
+
+    ランナーが終端文字とブロックの外側を所有しているのと同じ理由で、字下げと行末の
+    空白も所有する。分類も言い換えも字下げを動かさないので、動いたなら飾りの剥がし
+    (`unfence` の strip)かモデル側の脱落で、どちらも復元でよい。
+
+    実際に両方が起きている。`clean` の strip は `  - 子項目` を `- 子項目` にして
+    いたし、FreeToken(OpenAI互換・port 1919)は連続スペースを n-1 個にして返す。
+    行スコープでは塊全体が改変可なので局所性ゲートが効かず、字下げの消えた行がその
+    まま書き込まれていた。
+
+    **守れるのは外枠だけ。**行の内側の連続スペース(`` `a  b` `` → `` `a b` ``)は、
+    ここでは区別がつかない。行スコープに持ち込むなら `preserve()` で拾う。
+    """
+    if not text.strip():
+        return text
+    lead, trail = outer_ws(frag)
+    return lead + text.strip() + trail
+
+
+def clean(raw, frag):
+    """モデル出力の飾りを剥がし、外枠の空白を戻す。
+
+    剥がすのはコードフェンスと、全体を囲む引用符。引用符を剥がすのは、行スコープの
+    分類でラベルが `"OTHER"` の形で返るため。ただし断片自身が引用符で始まる/終わる
+    ときは触らない — フェンスと同じで、本物を飾りと間違えて消さないための門。
     """
     t = unfence(raw, frag)
-    if frag.startswith(('"', "'")) or frag.endswith(('"', "'")):
-        return t
-    return t.strip().strip('"').strip("'")
+    if not (frag.startswith(('"', "'")) or frag.endswith(('"', "'"))):
+        t = t.strip().strip('"').strip("'")
+    return reown_ws(t, frag)

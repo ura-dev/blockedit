@@ -217,7 +217,8 @@ def main():
     if use_llm:
         model = client.model_name(args.base_url)
         if model is None:
-            sys.exit(f"KoboldCppに接続できません: {args.base_url}(未起動か、Forgeが常駐中)")
+            sys.exit(f"LLMサーバに接続できません: {args.base_url}"
+                     f"(未起動か、別プロセスがGPUを掴んでいる)")
         print(f"model: {model}")
 
     stats, rejects, accepted, llm_seconds, touched = run(

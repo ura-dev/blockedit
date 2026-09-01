@@ -91,9 +91,23 @@ def call(base_url, messages, frag, sampler=None, timeout=600):
 
 
 def model_name(base_url):
-    url = base_url.rstrip("/").removesuffix("/v1") + "/api/v1/model"
-    try:
-        with urllib.request.urlopen(url, timeout=5) as resp:
-            return json.loads(resp.read().decode("utf-8")).get("result", "?")
-    except (urllib.error.URLError, TimeoutError, ValueError):
-        return None
+    """疎通確認を兼ねてモデル名を取る。取れなければ None(=未起動とみなす)。
+
+    KoboldCpp 専用の `/api/v1/model` だけを見ていた頃、OpenAI互換の他サーバを
+    「未起動」と誤判定していた。**判定に使うのは互換エンドポイントのほうを先にする。**
+    呼び出し本体(`/v1/chat/completions`)は元から互換仕様なので、ここだけが壁だった。
+    """
+    base = base_url.rstrip("/")
+    for url, pick in (
+        (base + "/models", lambda d: (d.get("data") or [{}])[0].get("id")),
+        (base.removesuffix("/v1") + "/api/v1/model", lambda d: d.get("result")),
+    ):
+        try:
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                got = pick(json.loads(resp.read().decode("utf-8")))
+        except (urllib.error.URLError, TimeoutError, ValueError,
+                KeyError, IndexError, AttributeError):
+            continue
+        if got:
+            return got
+    return None

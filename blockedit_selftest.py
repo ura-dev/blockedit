@@ -19,7 +19,8 @@ import sys
 from pathlib import Path
 
 import task as taskmod
-from blocks import UNITS, join_blocks, relines, split, split_trailing_blanks
+from blocks import (UNITS, clean, join_blocks, relines, split,
+                    split_trailing_blanks)
 from gates import check
 
 HERE = Path(__file__).resolve().parent
@@ -132,6 +133,34 @@ def run_split_cases():
     return bad
 
 
+# 外枠の空白はランナーが所有する。モデルが落としても、飾りの剥がしで消えても戻す。
+# 「脱落した出力」側は実測に基づく — FreeToken(port 1919)は連続スペースを n-1 個に
+# して返し、unfence の strip は字下げを丸ごと落としていた。
+CLEAN_CASES = [
+    ("字下げの脱落を戻す",           "  - 子項目",      "- 子項目",       "  - 子項目"),
+    ("連続スペースの n-1 を戻す",     "    - 孫項目",    "   - 孫項目",    "    - 孫項目"),
+    ("行末の空白(改行記法)を戻す",   "行末に空白  ",    "行末に空白",     "行末に空白  "),
+    ("字下げのない行は素通り",        "普通の行",        "書き換えた行",   "書き換えた行"),
+    ("囲みの引用符は今までどおり剥がす", "この方式は見送る。", '"OTHER"',   "OTHER"),
+    ("断片自身が引用符なら剥がさない", '"引用"で始まる行', '"引用"で直した行', '"引用"で直した行'),
+    ("空出力を字下げで蘇らせない",     "  - 子項目",      "   ",            None),
+]
+
+
+def run_clean_cases():
+    """clean() が外枠の空白を原文どおりに戻すこと。"""
+    bad = 0
+    for name, frag, raw, want in CLEAN_CASES:
+        got = clean(raw, frag)
+        # want=None は「空のまま(ゲートが落とす)」の意
+        ok = (not got.strip()) if want is None else (got == want)
+        if not ok:
+            bad += 1
+            print(f"NG   [clean] {name}")
+            print(f"     frag={frag!r} raw={raw!r} 期待={want!r} 実際={got!r}")
+    return bad
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     task = taskmod.load(sys.argv[1] if len(sys.argv) > 1
@@ -144,8 +173,9 @@ def main():
     bad = run_cases("match", task, BEFORE, MATCH_CASES, "match")
     bad += run_cases("unit", LineTask, LINE_BEFORE, LINE_CASES, "unit")
     bad += run_split_cases()
+    bad += run_clean_cases()
 
-    total = len(MATCH_CASES) + len(LINE_CASES) + 5
+    total = len(MATCH_CASES) + len(LINE_CASES) + len(CLEAN_CASES) + 5
     print(f"[selftest] {total}件中 {total - bad}件が期待どおり"
           f"{'' if not bad else f' — 不一致 {bad}件'}")
     return 1 if bad else 0
